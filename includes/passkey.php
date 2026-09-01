@@ -59,10 +59,11 @@ function smsPasskeyRpName(): string
 
 function smsPasskeyOrigin(): string
 {
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || ((int) ($_SERVER['SERVER_PORT'] ?? 0) === 443)
-        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
-    $scheme = $https ? 'https' : 'http';
+    if (!function_exists('sms2_request_is_https')) {
+        require_once dirname(__DIR__) . '/config/config.php';
+    }
+
+    $scheme = sms2_request_is_https() ? 'https' : 'http';
     $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
     // Keep origin host as the browser sent it (including 127.0.0.1 if used)
     return $scheme . '://' . $host;

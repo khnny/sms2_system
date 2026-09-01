@@ -23,8 +23,11 @@ if (!defined('ROOT_PATH')) {
 
 // Optional machine-specific overrides. Copy config/local.example.php to
 // config/local.php on another computer if its MySQL settings are different.
+// On HostForge and other cloud hosts, skip local.php when DB env vars are injected.
 $sms2LocalConfig = __DIR__ . '/local.php';
-if (is_readable($sms2LocalConfig)) {
+$sms2CloudDbEnv = getenv('DB_HOST') ?: getenv('DB_DATABASE') ?: getenv('SMS2_DB_HOST') ?: getenv('SMS2_DB_NAME');
+$hasCloudDbEnv = $sms2CloudDbEnv !== false && $sms2CloudDbEnv !== '';
+if (is_readable($sms2LocalConfig) && !$hasCloudDbEnv) {
     require_once $sms2LocalConfig;
 }
 
@@ -50,6 +53,22 @@ if (!function_exists('sms2_env_first')) {
         }
 
         return $default;
+    }
+}
+
+if (!function_exists('sms2_request_is_https')) {
+    function sms2_request_is_https(): bool
+    {
+        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+            return true;
+        }
+
+        $proto = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? $_SERVER['HTTP_X_FORWARDED_SSL'] ?? '';
+        if (strtolower((string) $proto) === 'https') {
+            return true;
+        }
+
+        return (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443;
     }
 }
 

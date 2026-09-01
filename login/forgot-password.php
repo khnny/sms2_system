@@ -84,7 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (in_array($status, ['active', 'locked'], true) && $sendTo !== '') {
                         $token = smsCreatePasswordResetToken((int) $user['id']);
                         if ($token) {
-                            $resetUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+                            $resetScheme = (function_exists('sms2_request_is_https') && sms2_request_is_https()) ? 'https' : 'http';
+                            $resetUrl = $resetScheme
                                 . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
                                 . BASE_URL . '/login/reset-password.php?token=' . urlencode($token);
 

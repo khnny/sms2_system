@@ -5,8 +5,12 @@
 
 declare(strict_types=1);
 
+if (!function_exists('sms2_request_is_https')) {
+    require_once __DIR__ . '/config.php';
+}
+
 if (session_status() === PHP_SESSION_NONE) {
-    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $secure = sms2_request_is_https();
 
     session_name('SMS2SESSID');
 
