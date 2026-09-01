@@ -6,6 +6,8 @@ require_once __DIR__ . '/../config/config.php';
 require_once ROOT_PATH . '/includes/authentication.php';
 require_once ROOT_PATH . '/includes/captcha.php';
 
+$dbUnavailable = !db();
+
 // First-time adoption: no users yet → setup Super Admin
 if (smsNeedsSetup()) {
     header('Location: ' . BASE_URL . '/setup/index.php');
