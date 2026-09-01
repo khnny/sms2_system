@@ -94,7 +94,9 @@ function getDatabaseConnection(): PDO
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ]);
+        $GLOBALS['sms2_db_connect_error'] = '';
     } catch (PDOException $e) {
+        $GLOBALS['sms2_db_connect_error'] = $e->getMessage();
         error_log('SMS2 DB connection failed: ' . $e->getMessage());
         throw new RuntimeException(
             'Database unavailable (' . DB_HOST . ':' . DB_PORT . '/' . DB_NAME . '). '
@@ -103,6 +105,29 @@ function getDatabaseConnection(): PDO
     }
 
     return $pdo;
+}
+
+function sms2_db_last_connect_error(): string
+{
+    return (string) ($GLOBALS['sms2_db_connect_error'] ?? '');
+}
+
+/**
+ * Safe summary for deploy troubleshooting (no password).
+ *
+ * @return array{cloud_env:bool,host:string,port:string,database:string,user:string,connection:string,error:string}
+ */
+function sms2_db_connection_summary(): array
+{
+    return [
+        'cloud_env' => function_exists('sms2_has_cloud_db_env') && sms2_has_cloud_db_env(),
+        'host' => defined('DB_HOST') ? (string) DB_HOST : '',
+        'port' => defined('DB_PORT') ? (string) DB_PORT : '',
+        'database' => defined('DB_NAME') ? (string) DB_NAME : '',
+        'user' => defined('DB_USER') ? (string) DB_USER : '',
+        'connection' => defined('DB_CONNECTION') ? (string) DB_CONNECTION : '',
+        'error' => sms2_db_last_connect_error(),
+    ];
 }
 
 /**

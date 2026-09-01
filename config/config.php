@@ -31,15 +31,15 @@ if (!function_exists('sms2_env_raw')) {
     {
         $value = getenv($key);
         if ($value !== false && $value !== '') {
-            return (string) $value;
+            return trim((string) $value);
         }
 
         if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
-            return (string) $_ENV[$key];
+            return trim((string) $_ENV[$key]);
         }
 
         if (isset($_SERVER[$key]) && $_SERVER[$key] !== '' && !str_starts_with($key, 'HTTP_')) {
-            return (string) $_SERVER[$key];
+            return trim((string) $_SERVER[$key]);
         }
 
         return false;
