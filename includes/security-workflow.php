@@ -19,10 +19,20 @@ function smsEnsureSecurityTables(): void
         return;
     }
 
-    $pdo->exec(
-        'CREATE TABLE IF NOT EXISTS security_otps (
+    $idType = smsUsersIdSqlType($pdo);
+    $usersExist = smsUsersTableExists($pdo);
+    $otpFk = $usersExist
+        ? ",\n            CONSTRAINT fk_otp_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+        : '';
+    $prrFk = $usersExist
+        ? ",\n            CONSTRAINT fk_prr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,\n            CONSTRAINT fk_prr_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL"
+        : '';
+
+    smsCreateTableIfNeeded(
+        $pdo,
+        "CREATE TABLE IF NOT EXISTS security_otps (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            user_id INT UNSIGNED NOT NULL,
+            user_id {$idType} NOT NULL,
             purpose VARCHAR(40) NOT NULL,
             code_hash CHAR(64) NOT NULL,
             module_key VARCHAR(60) NULL,
@@ -31,20 +41,20 @@ function smsEnsureSecurityTables(): void
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_otp_user (user_id),
-            KEY idx_otp_expires (expires_at),
-            CONSTRAINT fk_otp_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+            KEY idx_otp_expires (expires_at){$otpFk}
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
 
-    $pdo->exec(
-        'CREATE TABLE IF NOT EXISTS password_reset_requests (
+    smsCreateTableIfNeeded(
+        $pdo,
+        "CREATE TABLE IF NOT EXISTS password_reset_requests (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            user_id INT UNSIGNED NOT NULL,
+            user_id {$idType} NOT NULL,
             module_key VARCHAR(60) NOT NULL,
             reason VARCHAR(500) NULL,
             requested_password_hash VARCHAR(255) NULL,
-            status ENUM(\'pending\',\'approved\',\'rejected\',\'cancelled\') NOT NULL DEFAULT \'pending\',
-            admin_id INT UNSIGNED NULL,
+            status ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+            admin_id {$idType} NULL,
             admin_note VARCHAR(500) NULL,
             temp_password_set TINYINT(1) NOT NULL DEFAULT 0,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -52,10 +62,8 @@ function smsEnsureSecurityTables(): void
             PRIMARY KEY (id),
             KEY idx_prr_user (user_id),
             KEY idx_prr_status (status),
-            KEY idx_prr_module (module_key),
-            CONSTRAINT fk_prr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            CONSTRAINT fk_prr_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+            KEY idx_prr_module (module_key){$prrFk}
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
 
     // Upgrade older installs that lack requested_password_hash

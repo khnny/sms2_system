@@ -77,3 +77,82 @@ function db(): ?PDO
         return null;
     }
 }
+
+function smsUsersTableExists(?PDO $pdo): bool
+{
+    if (!$pdo instanceof PDO) {
+        return false;
+    }
+
+    try {
+        return (bool) $pdo->query("SHOW TABLES LIKE 'users'")->fetchColumn();
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+/**
+ * Match child user_id columns to users.id so MariaDB foreign keys can be created.
+ */
+function smsUsersIdSqlType(?PDO $pdo): string
+{
+    if (!$pdo instanceof PDO) {
+        return 'INT UNSIGNED';
+    }
+
+    try {
+        $row = $pdo->query("SHOW COLUMNS FROM users LIKE 'id'")->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row) || empty($row['Type'])) {
+            return 'INT UNSIGNED';
+        }
+
+        $type = strtolower((string) $row['Type']);
+        $unsigned = str_contains($type, 'unsigned') ? ' UNSIGNED' : '';
+        $map = [
+            'bigint' => 'BIGINT',
+            'mediumint' => 'MEDIUMINT',
+            'smallint' => 'SMALLINT',
+            'tinyint' => 'TINYINT',
+            'int' => 'INT',
+        ];
+        foreach ($map as $prefix => $sql) {
+            if (str_starts_with($type, $prefix)) {
+                return $sql . $unsigned;
+            }
+        }
+    } catch (Throwable $e) {
+        // users table missing on a fresh HostForge database
+    }
+
+    return 'INT UNSIGNED';
+}
+
+/**
+ * Create a table, retrying without FOREIGN KEY clauses if MariaDB rejects them (errno 150).
+ */
+function smsCreateTableIfNeeded(PDO $pdo, string $sql): void
+{
+    try {
+        $pdo->exec($sql);
+        return;
+    } catch (PDOException $first) {
+        $message = $first->getMessage();
+        $isFkError = str_contains($message, 'errno: 150')
+            || str_contains($message, 'Foreign key constraint is incorrectly formed')
+            || str_contains($message, 'Cannot add foreign key constraint');
+        if (!$isFkError) {
+            throw $first;
+        }
+
+        $stripped = preg_replace(
+            '/,\s*CONSTRAINT\s+`?[a-zA-Z0-9_]+`?\s+FOREIGN KEY\s*\([^)]+\)\s*REFERENCES\s+`?[a-zA-Z0-9_]+`?\s*\([^)]+\)(?:\s+ON\s+DELETE\s+(?:CASCADE|SET NULL|RESTRICT|NO ACTION))?(?:\s+ON\s+UPDATE\s+(?:CASCADE|SET NULL|RESTRICT|NO ACTION))?/i',
+            '',
+            $sql
+        );
+        if (!is_string($stripped) || $stripped === $sql) {
+            throw $first;
+        }
+
+        $pdo->exec($stripped);
+    }
+}
