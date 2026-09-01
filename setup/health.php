@@ -16,8 +16,12 @@ $providedToken = trim((string) ($_GET['token'] ?? $_POST['token'] ?? ''));
 if ($expectedToken === '' || !hash_equals($expectedToken, $providedToken)) {
     http_response_code(403);
     header('Content-Type: text/html; charset=utf-8');
+    $reason = $expectedToken === ''
+        ? 'SMS2_DEPLOY_TOKEN is not visible to PHP yet. Save it in Environment Variables, redeploy the app, then retry.'
+        : 'The token in the URL does not match SMS2_DEPLOY_TOKEN. Copy the value exactly from Environment Variables.';
     echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Health Check</title></head><body>';
-    echo '<p>Forbidden. Set <code>SMS2_DEPLOY_TOKEN</code> in Environment Variables, then open this page with <code>?token=...</code></p>';
+    echo '<p>Forbidden. ' . htmlspecialchars($reason) . '</p>';
+    echo '<p>Use: <code>/setup/health.php?token=YOUR_TOKEN</code></p>';
     echo '</body></html>';
     exit;
 }

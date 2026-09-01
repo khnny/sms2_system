@@ -94,6 +94,13 @@ if (is_readable($sms2LocalConfig) && !sms2_has_cloud_db_env()) {
     require_once $sms2LocalConfig;
 }
 
+if (!defined('SMS2_DEPLOY_TOKEN')) {
+    $sms2DeployToken = sms2_env('SMS2_DEPLOY_TOKEN');
+    if ($sms2DeployToken !== null && $sms2DeployToken !== '') {
+        define('SMS2_DEPLOY_TOKEN', $sms2DeployToken);
+    }
+}
+
 if (!function_exists('sms2_request_is_https')) {
     function sms2_request_is_https(): bool
     {
