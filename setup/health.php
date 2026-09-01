@@ -27,16 +27,22 @@ require_once ROOT_PATH . '/config/session.php';
 require_once ROOT_PATH . '/modules/crad/config/config.php';
 require_once ROOT_PATH . '/includes/captcha.php';
 
-$cloudDbEnv = getenv('DB_HOST') ?: getenv('DB_DATABASE') ?: getenv('SMS2_DB_HOST') ?: getenv('SMS2_DB_NAME');
-$hasCloudDbEnv = $cloudDbEnv !== false && $cloudDbEnv !== '';
+$hasCloudDbEnv = sms2_has_cloud_db_env();
 
 $checks = [];
+
+$envSources = [];
+foreach (['DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DATABASE_URL'] as $envKey) {
+    if (sms2_env_raw($envKey) !== false) {
+        $envSources[] = $envKey;
+    }
+}
 
 $checks[] = [
     'label' => 'Cloud DB env detected (local.php skipped)',
     'ok' => $hasCloudDbEnv,
     'detail' => $hasCloudDbEnv
-        ? 'Yes — HostForge env vars take priority'
+        ? 'Yes — detected: ' . implode(', ', $envSources)
         : 'No — using config/local.php or defaults',
 ];
 
