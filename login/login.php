@@ -1238,6 +1238,12 @@ html[data-theme="dark"] .login-glass .sms-cf-widget.is-verified {
             </div>
         <?php endif; ?>
 
+        <?php if ($dbUnavailable): ?>
+            <div class="alert alert-danger login-alert" role="alert">
+                <?= smsIcon('alert-circle', ['class' => 'me-2']) ?>Database unavailable. Set <code>DB_HOST</code>, <code>DB_PORT</code>, and <code>DB_DATABASE</code> in HostForge Environment Variables, redeploy, then open <code>/setup/health.php</code>.
+            </div>
+        <?php endif; ?>
+
         <?php if ($info): ?>
             <div class="alert alert-info login-alert" role="alert">
                 <?= smsIcon('info-circle', ['class' => 'me-2']) ?><?= e($info) ?>
