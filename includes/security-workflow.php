@@ -28,43 +28,51 @@ function smsEnsureSecurityTables(): void
         ? ",\n            CONSTRAINT fk_prr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,\n            CONSTRAINT fk_prr_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL"
         : '';
 
-    smsCreateTableIfNeeded(
-        $pdo,
-        "CREATE TABLE IF NOT EXISTS security_otps (
-            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            user_id {$idType} NOT NULL,
-            purpose VARCHAR(40) NOT NULL,
-            code_hash CHAR(64) NOT NULL,
-            module_key VARCHAR(60) NULL,
-            expires_at DATETIME NOT NULL,
-            used_at DATETIME NULL,
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY idx_otp_user (user_id),
-            KEY idx_otp_expires (expires_at){$otpFk}
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-    );
+    try {
+        smsCreateTableIfNeeded(
+            $pdo,
+            "CREATE TABLE IF NOT EXISTS security_otps (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                user_id {$idType} NOT NULL,
+                purpose VARCHAR(40) NOT NULL,
+                code_hash CHAR(64) NOT NULL,
+                module_key VARCHAR(60) NULL,
+                expires_at DATETIME NOT NULL,
+                used_at DATETIME NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_otp_user (user_id),
+                KEY idx_otp_expires (expires_at){$otpFk}
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    } catch (Throwable $e) {
+        error_log('SMS2 security_otps: ' . $e->getMessage());
+    }
 
-    smsCreateTableIfNeeded(
-        $pdo,
-        "CREATE TABLE IF NOT EXISTS password_reset_requests (
-            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            user_id {$idType} NOT NULL,
-            module_key VARCHAR(60) NOT NULL,
-            reason VARCHAR(500) NULL,
-            requested_password_hash VARCHAR(255) NULL,
-            status ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
-            admin_id {$idType} NULL,
-            admin_note VARCHAR(500) NULL,
-            temp_password_set TINYINT(1) NOT NULL DEFAULT 0,
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            resolved_at DATETIME NULL,
-            PRIMARY KEY (id),
-            KEY idx_prr_user (user_id),
-            KEY idx_prr_status (status),
-            KEY idx_prr_module (module_key){$prrFk}
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-    );
+    try {
+        smsCreateTableIfNeeded(
+            $pdo,
+            "CREATE TABLE IF NOT EXISTS password_reset_requests (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                user_id {$idType} NOT NULL,
+                module_key VARCHAR(60) NOT NULL,
+                reason VARCHAR(500) NULL,
+                requested_password_hash VARCHAR(255) NULL,
+                status ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+                admin_id {$idType} NULL,
+                admin_note VARCHAR(500) NULL,
+                temp_password_set TINYINT(1) NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                resolved_at DATETIME NULL,
+                PRIMARY KEY (id),
+                KEY idx_prr_user (user_id),
+                KEY idx_prr_status (status),
+                KEY idx_prr_module (module_key){$prrFk}
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    } catch (Throwable $e) {
+        error_log('SMS2 password_reset_requests: ' . $e->getMessage());
+    }
 
     // Upgrade older installs that lack requested_password_hash
     try {
@@ -79,26 +87,34 @@ function smsEnsureSecurityTables(): void
         // ignore
     }
 
-    $pdo->exec(
-        'CREATE TABLE IF NOT EXISTS login_throttles (
-            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            throttle_key CHAR(64) NOT NULL,
-            ip_address VARCHAR(45) NOT NULL,
-            attempts INT UNSIGNED NOT NULL DEFAULT 0,
-            locked_until DATETIME NULL,
-            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            UNIQUE KEY uq_login_throttle_key (throttle_key),
-            KEY idx_login_throttle_ip (ip_address),
-            KEY idx_login_throttle_locked (locked_until)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
-    );
+    try {
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS login_throttles (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                throttle_key CHAR(64) NOT NULL,
+                ip_address VARCHAR(45) NOT NULL,
+                attempts INT UNSIGNED NOT NULL DEFAULT 0,
+                locked_until DATETIME NULL,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_login_throttle_key (throttle_key),
+                KEY idx_login_throttle_ip (ip_address),
+                KEY idx_login_throttle_locked (locked_until)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        );
+    } catch (Throwable $e) {
+        error_log('SMS2 login_throttles: ' . $e->getMessage());
+    }
 
-    if (function_exists('smsEnsureAuthenticatorTable')) {
-        smsEnsureAuthenticatorTable();
-    } else {
-        require_once __DIR__ . '/totp.php';
-        smsEnsureAuthenticatorTable();
+    try {
+        if (function_exists('smsEnsureAuthenticatorTable')) {
+            smsEnsureAuthenticatorTable();
+        } else {
+            require_once __DIR__ . '/totp.php';
+            smsEnsureAuthenticatorTable();
+        }
+    } catch (Throwable $e) {
+        error_log('SMS2 user_authenticators: ' . $e->getMessage());
     }
 }
 

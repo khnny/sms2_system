@@ -21,22 +21,26 @@ function smsEnsurePasskeyTable(): void
     $pkFk = smsUsersTableExists($pdo)
         ? ",\n            CONSTRAINT fk_passkey_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
         : '';
-    smsCreateTableIfNeeded(
-        $pdo,
-        "CREATE TABLE IF NOT EXISTS user_passkeys (
-            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            user_id {$idType} NOT NULL,
-            credential_id VARCHAR(255) NOT NULL,
-            public_key TEXT NOT NULL,
-            sign_count INT UNSIGNED NOT NULL DEFAULT 0,
-            device_name VARCHAR(120) NOT NULL DEFAULT 'Passkey',
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            last_used_at DATETIME NULL,
-            PRIMARY KEY (id),
-            UNIQUE KEY uq_passkey_cred (credential_id),
-            KEY idx_passkey_user (user_id){$pkFk}
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-    );
+    try {
+        smsCreateTableIfNeeded(
+            $pdo,
+            "CREATE TABLE IF NOT EXISTS user_passkeys (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                user_id {$idType} NOT NULL,
+                credential_id VARCHAR(255) NOT NULL,
+                public_key TEXT NOT NULL,
+                sign_count INT UNSIGNED NOT NULL DEFAULT 0,
+                device_name VARCHAR(120) NOT NULL DEFAULT 'Passkey',
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_used_at DATETIME NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_passkey_cred (credential_id),
+                KEY idx_passkey_user (user_id){$pkFk}
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    } catch (Throwable $e) {
+        error_log('SMS2 user_passkeys: ' . $e->getMessage());
+    }
 }
 
 function smsPasskeyRpId(): string

@@ -18,19 +18,24 @@ function smsEnsureAuthenticatorTable(): void
     $uaFk = smsUsersTableExists($pdo)
         ? ",\n            CONSTRAINT fk_ua_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
         : '';
-    smsCreateTableIfNeeded(
-        $pdo,
-        "CREATE TABLE IF NOT EXISTS user_authenticators (
-            user_id {$idType} NOT NULL,
-            secret VARCHAR(512) NOT NULL,
-            enabled TINYINT(1) NOT NULL DEFAULT 0,
-            pending_secret VARCHAR(512) NULL,
-            confirmed_at DATETIME NULL,
-            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (user_id){$uaFk}
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-    );
+    try {
+        smsCreateTableIfNeeded(
+            $pdo,
+            "CREATE TABLE IF NOT EXISTS user_authenticators (
+                user_id {$idType} NOT NULL,
+                secret VARCHAR(512) NOT NULL,
+                enabled TINYINT(1) NOT NULL DEFAULT 0,
+                pending_secret VARCHAR(512) NULL,
+                confirmed_at DATETIME NULL,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id){$uaFk}
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    } catch (Throwable $e) {
+        error_log('SMS2 user_authenticators: ' . $e->getMessage());
+        return;
+    }
     // Widen legacy VARCHAR(64) columns so encrypted secrets fit
     try {
         $pdo->exec('ALTER TABLE user_authenticators MODIFY secret VARCHAR(512) NOT NULL');
