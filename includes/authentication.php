@@ -1133,6 +1133,14 @@ function smsLoginAttempt(string $username, string $password): array
         return $pack('empty', 'Please enter your email and password.');
     }
 
+    if (!db()) {
+        return $pack(
+            'db_unavailable',
+            'Database unavailable. Set DB_HOST, DB_PORT, and DB_DATABASE in HostForge Environment Variables, redeploy, then open /setup/health.php to verify.',
+            'danger'
+        );
+    }
+
     // IP / login gate first (covers random spam emails too)
     $throttle = smsGetLoginThrottle($username);
     if (!empty($throttle['locked'])) {

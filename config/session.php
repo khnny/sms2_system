@@ -11,12 +11,13 @@ if (!function_exists('sms2_request_is_https')) {
 
 if (session_status() === PHP_SESSION_NONE) {
     $secure = sms2_request_is_https();
+    $cookiePath = (defined('BASE_URL') && BASE_URL !== '') ? BASE_URL . '/' : '/';
 
     session_name('SMS2SESSID');
 
     session_set_cookie_params([
         'lifetime' => 0,
-        'path'     => '/',
+        'path'     => $cookiePath,
         'domain'   => '',
         'secure'   => $secure,
         'httponly'  => true,

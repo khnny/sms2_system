@@ -7,20 +7,58 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
+if (!function_exists('sms2_database_url_config')) {
+    /**
+     * @return array{host:string,port:string,name:string,user:string,pass:string}|null
+     */
+    function sms2_database_url_config(): ?array
+    {
+        $url = sms2_env_first(['DATABASE_URL', 'SMS2_DATABASE_URL']);
+        if ($url === null || $url === '') {
+            return null;
+        }
+
+        $parts = parse_url($url);
+        if (!is_array($parts)) {
+            return null;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        if (!in_array($scheme, ['mysql', 'mariadb'], true)) {
+            return null;
+        }
+
+        $database = ltrim((string) ($parts['path'] ?? ''), '/');
+        if ($database === '') {
+            return null;
+        }
+
+        return [
+            'host' => (string) ($parts['host'] ?? 'localhost'),
+            'port' => (string) ($parts['port'] ?? '3306'),
+            'name' => $database,
+            'user' => rawurldecode((string) ($parts['user'] ?? '')),
+            'pass' => rawurldecode((string) ($parts['pass'] ?? '')),
+        ];
+    }
+}
+
+$dbUrl = sms2_database_url_config();
+
 if (!defined('DB_HOST')) {
-    define('DB_HOST', sms2_env_first(['SMS2_DB_HOST', 'DB_HOST', 'MYSQL_HOST', 'MARIADB_HOST'], 'localhost'));
+    define('DB_HOST', sms2_env_first(['SMS2_DB_HOST', 'DB_HOST', 'MYSQL_HOST', 'MARIADB_HOST'], $dbUrl['host'] ?? 'localhost'));
 }
 if (!defined('DB_PORT')) {
-    define('DB_PORT', sms2_env_first(['SMS2_DB_PORT', 'DB_PORT', 'MYSQL_PORT', 'MARIADB_PORT'], '3306'));
+    define('DB_PORT', sms2_env_first(['SMS2_DB_PORT', 'DB_PORT', 'MYSQL_PORT', 'MARIADB_PORT'], $dbUrl['port'] ?? '3306'));
 }
 if (!defined('DB_NAME')) {
-    define('DB_NAME', sms2_env_first(['SMS2_DB_NAME', 'DB_DATABASE', 'DB_NAME', 'MYSQL_DATABASE', 'MARIADB_DATABASE'], 'sms2_db'));
+    define('DB_NAME', sms2_env_first(['SMS2_DB_NAME', 'DB_DATABASE', 'DB_NAME', 'MYSQL_DATABASE', 'MARIADB_DATABASE'], $dbUrl['name'] ?? 'sms2_db'));
 }
 if (!defined('DB_USER')) {
-    define('DB_USER', sms2_env_first(['SMS2_DB_USER', 'DB_USERNAME', 'DB_USER', 'MYSQL_USER', 'MARIADB_USER'], 'root'));
+    define('DB_USER', sms2_env_first(['SMS2_DB_USER', 'DB_USERNAME', 'DB_USER', 'MYSQL_USER', 'MARIADB_USER'], $dbUrl['user'] ?? 'root'));
 }
 if (!defined('DB_PASS')) {
-    define('DB_PASS', sms2_env_first(['SMS2_DB_PASS', 'DB_PASSWORD', 'DB_PASS', 'MYSQL_PASSWORD', 'MARIADB_PASSWORD'], ''));
+    define('DB_PASS', sms2_env_first(['SMS2_DB_PASS', 'DB_PASSWORD', 'DB_PASS', 'MYSQL_PASSWORD', 'MARIADB_PASSWORD'], $dbUrl['pass'] ?? ''));
 }
 if (!defined('DB_CHARSET')) {
     define('DB_CHARSET', sms2_env_first(['SMS2_DB_CHARSET', 'DB_CHARSET'], 'utf8mb4'));
@@ -59,7 +97,8 @@ function getDatabaseConnection(): PDO
     } catch (PDOException $e) {
         error_log('SMS2 DB connection failed: ' . $e->getMessage());
         throw new RuntimeException(
-            'Database unavailable. Run database/install.php or start MySQL in XAMPP.'
+            'Database unavailable (' . DB_HOST . ':' . DB_PORT . '/' . DB_NAME . '). '
+            . 'Check HostForge Environment Variables or open /setup/health.php.'
         );
     }
 
